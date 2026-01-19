@@ -150,6 +150,60 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     request.session["user"] = {"username": user.username, "display_name": user.display_name, "role": user.role}
     return RedirectResponse("/cashier", status_code=302)
 
+@app.get("/setup")
+def setup_users(db: Session = Depends(get_db)):
+    """Endpoint khusus untuk setup user default (panggil sekali saja via browser)"""
+    try:
+        # User admin
+        admin = db.query(User).filter(User.username == "admin").first()
+        if not admin:
+            admin = User(
+                username="admin",
+                password_hash=hash_password("admin123"),
+                role="admin",
+                display_name="Administrator"
+            )
+            db.add(admin)
+            admin_created = True
+        else:
+            admin_created = False
+        
+        # User demo
+        demo = db.query(User).filter(User.username == "demo").first()
+        if not demo:
+            demo = User(
+                username="demo",
+                password_hash=hash_password("demo123"),
+                role="admin",
+                display_name="Demo User"
+            )
+            db.add(demo)
+            demo_created = True
+        else:
+            demo_created = False
+        
+        db.commit()
+        
+        result = {
+            "success": True,
+            "message": "Setup berhasil!",
+            "users": {
+                "admin": "created" if admin_created else "already exists",
+                "demo": "created" if demo_created else "already exists"
+            },
+            "login_info": {
+                "admin": {"username": "admin", "password": "admin123"},
+                "demo": {"username": "demo", "password": "demo123"}
+            }
+        }
+        
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500
+        )
+
 @app.get("/logout")
 def logout(request: Request):
     request.session.clear()

@@ -4,6 +4,3 @@ sqlalchemy
 passlib[bcrypt]
 itsdangerous
 jinja2
-pandas
-openpyxl
-python-multipart

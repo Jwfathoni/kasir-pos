@@ -9,7 +9,6 @@ from datetime import datetime, date
 from calendar import monthrange
 import pandas as pd
 import io
-import os
 from fastapi.responses import JSONResponse
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -72,47 +71,8 @@ def run_migrations():
 
 run_migrations()
 
-# Buat user default jika belum ada
-def create_default_users():
-    """Buat user default (admin dan demo) jika belum ada"""
-    try:
-        db = next(get_db())
-        # User admin
-        admin = db.query(User).filter(User.username == "admin").first()
-        if not admin:
-            admin = User(
-                username="admin",
-                password_hash=hash_password("admin123"),
-                role="admin",
-                display_name="Administrator"
-            )
-            db.add(admin)
-            print("[OK] User admin default berhasil dibuat")
-        
-        # User demo
-        demo = db.query(User).filter(User.username == "demo").first()
-        if not demo:
-            demo = User(
-                username="demo",
-                password_hash=hash_password("demo123"),
-                role="admin",
-                display_name="Demo User"
-            )
-            db.add(demo)
-            print("[OK] User demo berhasil dibuat")
-        
-        db.commit()
-    except Exception as e:
-        print(f"Error creating default users: {e}")
-    finally:
-        db.close()
-
-create_default_users()
-
 app = FastAPI()
-# Gunakan secret key dari environment variable untuk production, fallback ke default untuk development
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+app.add_middleware(SessionMiddleware, secret_key="change-this-secret")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -150,59 +110,6 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     request.session["user"] = {"username": user.username, "display_name": user.display_name, "role": user.role}
     return RedirectResponse("/cashier", status_code=302)
 
-@app.get("/setup")
-def setup_users(db: Session = Depends(get_db)):
-    """Endpoint khusus untuk setup user default (panggil sekali saja via browser)"""
-    try:
-        # User admin
-        admin = db.query(User).filter(User.username == "admin").first()
-        if not admin:
-            admin = User(
-                username="admin",
-                password_hash=hash_password("admin123"),
-                role="admin",
-                display_name="Administrator"
-            )
-            db.add(admin)
-            admin_created = True
-        else:
-            admin_created = False
-        
-        # User demo
-        demo = db.query(User).filter(User.username == "demo").first()
-        if not demo:
-            demo = User(
-                username="demo",
-                password_hash=hash_password("demo123"),
-                role="admin",
-                display_name="Demo User"
-            )
-            db.add(demo)
-            demo_created = True
-        else:
-            demo_created = False
-        
-        db.commit()
-        
-        result = {
-            "success": True,
-            "message": "Setup berhasil!",
-            "users": {
-                "admin": "created" if admin_created else "already exists",
-                "demo": "created" if demo_created else "already exists"
-            },
-            "login_info": {
-                "admin": {"username": "admin", "password": "admin123"},
-                "demo": {"username": "demo", "password": "demo123"}
-            }
-        }
-        
-        return JSONResponse(content=result)
-    except Exception as e:
-        return JSONResponse(
-            content={"success": False, "error": str(e)},
-            status_code=500
-        )
 
 @app.get("/logout")
 def logout(request: Request):

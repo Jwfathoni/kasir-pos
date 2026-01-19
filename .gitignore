@@ -1,41 +1,16 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Python / venv
 .venv/
 venv/
 ENV/
 env/
-*.egg-info/
-dist/
-build/
+__pycache__/
+*.py[cod]
 
-# Database (akan dibuat otomatis di Railway)
-*.db
-*.sqlite
-*.sqlite3
-# pos.db - biarkan kosong, akan dibuat otomatis saat deploy
-
-# IDE
+# Editor / OS
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Environment
-.env
-.env.local
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.bak
+# NOTE:
+# pos.db sengaja TIDAK di-ignore agar ikut terupload ke GitHub (sesuai permintaan).

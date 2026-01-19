@@ -45,11 +45,31 @@
               <input type="hidden" name="stock" value="{{ p.stock }}">
               <input type="hidden" name="name" value="{{ p.name }}" id="hidden-name-{{ p.id }}">
               
-              <!-- Baris 1: Harga Asli | Harga Jual -->
-              <div class="action-row action-row-1">
-                <input name="cost_price" type="text" id="update-product-cost-price-{{ p.id }}" value="{{ p.cost_price | format_idr }}" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" class="action-input action-cost-price" placeholder="Harga Asli">
-                <input name="price" type="text" id="update-product-price-{{ p.id }}" value="{{ p.price | format_idr }}" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" class="action-input action-price" placeholder="Harga Jual">
-              </div>
+             <!-- Baris 1: Harga Asli | Harga Jual -->
+<div class="action-row action-row-1">
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <span style="font-size:0.7rem;color:var(--text-secondary);">Harga Beli (Asli)</span>
+    <input name="cost_price" type="text" id="update-product-cost-price-{{ p.id }}"
+           value="{{ p.cost_price | format_idr }}"
+           required
+           onkeyup="formatInputRupiah(this)"
+           onblur="formatInputRupiah(this)"
+           onfocus="unformatInputRupiah(this)"
+           class="action-input action-cost-price"
+           placeholder="Harga Beli">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+    <span style="font-size:0.7rem;color:var(--text-secondary);">Harga Jual</span>
+    <input name="price" type="text" id="update-product-price-{{ p.id }}"
+           value="{{ p.price | format_idr }}"
+           required
+           onkeyup="formatInputRupiah(this)"
+           onblur="formatInputRupiah(this)"
+           onfocus="unformatInputRupiah(this)"
+           class="action-input action-price"
+           placeholder="Harga Jual">
+  </div>
+</div>
               
               <!-- Baris 2: Stok Info | Update Produk -->
               <div class="action-row action-row-2">

@@ -594,6 +594,17 @@ def reports_page(request: Request, mode: str = "daily", db: Session = Depends(ge
 
     trx_list = q.filter(Transaction.created_at >= start, Transaction.created_at <= end).order_by(Transaction.id.desc()).all()
     omzet = sum(t.total for t in trx_list)
+    # Hitung modal (cost) dari item transaksi untuk pendapatan rill (omzet - modal penjualan)
+    total_modal = 0
+    for t in trx_list:
+        for item in t.items:
+            total_modal += (item.cost_price or 0) * (item.qty or 0)
+    pendapatan_rill = omzet - total_modal
+
+    # Pengeluaran dari upgrade stok (dari tabel stock_updates) pada periode yang sama
+    stock_updates = db.query(StockUpdate).filter(StockUpdate.created_at >= start, StockUpdate.created_at <= end).all()
+    pengeluaran_stok = sum(su.total_pengeluaran or 0 for su in stock_updates)
+
     jumlah = len(trx_list)
 
     return templates.TemplateResponse("reports.html", {
@@ -602,6 +613,8 @@ def reports_page(request: Request, mode: str = "daily", db: Session = Depends(ge
         "mode": mode,
         "trx_list": trx_list,
         "omzet": format_idr(omzet),
+        "pendapatan_rill": format_idr(pendapatan_rill),
+        "pengeluaran_stok": format_idr(pengeluaran_stok),
         "jumlah": jumlah,
         "user": request.session["user"]
     })

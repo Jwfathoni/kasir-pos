@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block content %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<div class="welcome-message">Selamat datang, <b>{{ user.display_name if user.display_name else user.username }}</b>!</div>
+<div class="grid2">
+  <div class="card">
+    <h2>📦 Produk</h2>
+    <input id="search" placeholder="🔍 Cari produk..." oninput="filterProducts()" style="font-size: 1rem;">
+    <div id="productList" class="plist">
+      {% for p in products %}
+      <button class="pitem" onclick='addToCart("{{p.code}}","{{p.name}}",{{p.price}})'>
+        <b>{{ p.name }}</b><br>
+        <small>{{ p.code }} • Rp {{ p.price | format_idr }} • Stok: {{ p.stock }}</small>
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🛒 Keranjang</h2>
+    <div id="cart"></div>
+    <div class="total">
+      <div>Total: <b id="total">0</b></div>
+    </div>
+
+    <form method="post" action="/checkout" onsubmit="submitCheckout(event); return false;">
+      <input type="hidden" name="cart_json" id="cart_json">
+      <label>Metode bayar</label>
+      <select name="payment_method">
+        <option value="cash">💰 Tunai</option>
+        <option value="qris">📱 QRIS</option>
+        <option value="transfer">🏦 Transfer</option>
+      </select>
+
+      <label>Bayar</label>
+      <input name="paid" id="paid" type="text" step="0.01" value="0" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" data-original-type="number">
+
+      <div class="form-actions">
+        <button type="submit">💾 Simpan & Print Struk</button>
+        <button type="button" class="danger" onclick="clearCart()">🗑️ Clear</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

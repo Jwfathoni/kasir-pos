@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card" id="reports-page">
+  <h2>{{ title }}</h2>
+
+  <div class="tabs">
+    <a class="tab {% if mode=='daily' %}active{% endif %}" href="/reports?mode=daily" data-mode="daily">Harian</a>
+    <a class="tab {% if mode=='monthly' %}active{% endif %}" href="/reports?mode=monthly" data-mode="monthly">Bulanan</a>
+    <a class="tab {% if mode=='yearly' %}active{% endif %}" href="/reports?mode=yearly" data-mode="yearly">Tahunan</a>
+  </div>
+
+  <div class="summary">
+    <div>📊 Jumlah transaksi: <b>{{ jumlah }}</b></div>
+    <div>💰 Omzet: <b>Rp {{ omzet }}</b></div>
+    <button id="export-excel-btn" class="btn" style="background-color: #4CAF50;">⬇️ Export ke Excel</button>
+  </div>
+
+  <table class="table">
+    <thead><tr><th>No</th><th>Tanggal</th><th>Kasir</th><th>Total</th><th>Aksi</th></tr></thead>
+    <tbody>
+      {% for t in trx_list %}
+      <tr>
+        <td>{{ t.trx_no }}</td>
+        <td>{{ t.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>{{ t.cashier }}</td>
+        <td>Rp {{ t.total | format_idr }}</td>
+        <td><a href="/receipt/{{t.id}}?from=reports&mode={{ mode }}" style="color: #64b5f6; text-decoration: none; font-weight: 500;">👁️ Lihat/Print</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3 class="report-section-title">Ringkasan Produk</h3>
+  <div class="summary product-summary">
+    <div>Total Produk: <b id="total-products">...</b></div>
+    <div>Produk Aktif: <b id="active-products">...</b></div>
+    <div>Produk Terjual Bulan Ini: <b id="products-sold-this-month">...</b></div>
+  </div>
+
+  <div class="grid-reports">
+    <div class="card">
+      <h3 class="report-card-title">Top Produk Paling Laku</h3>
+      <ul id="top-selling-products" class="report-list">
+        <li>...</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 class="report-card-title">Top Produk Omzet Tertinggi</h3>
+      <ul id="highest-revenue-products" class="report-list">
+        <li>...</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 class="report-card-title">Produk Jarang Laku</h3>
+      <ul id="rarely-sold-products" class="report-list">
+        <li>...</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 class="report-card-title">Produk Tidak Pernah Terjual</h3>
+      <ul id="never-sold-products" class="report-list">
+        <li>...</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 class="report-card-title">Produk Stok Hampir Habis</h3>
+      <ul id="low-stock-products" class="report-list">
+        <li>...</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 class="report-card-title">Produk Overstock</h3>
+      <ul id="overstock-products" class="report-list">
+        <li>...</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="report-section-title">Tren Penjualan</h3>
+  <div class="card">
+    <div id="sales-trend-chart" style="height: 300px;">
+      <!-- Chart will be rendered here -->
+      <pre id="sales-trend-raw">Loading sales trend...</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}

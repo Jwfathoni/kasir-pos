@@ -1,0 +1,110 @@
+{% extends "layout.html" %}
+{% block content %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<div class="grid" style="max-width: 100%;">
+  <div class="card">
+    <h2>➕ Tambah Produk</h2>
+    <form method="post" action="/products/add" class="form">
+      <label>Kode Produk</label>
+      <input name="code" placeholder="Contoh: PRD001" required>
+      <label>Nama Produk</label>
+      <input name="name" placeholder="Nama produk" required>
+      <label>Harga Asli / Harga Beli (Rp)</label>
+      <input name="cost_price" type="text" id="add-product-cost-price" placeholder="0" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)">
+      <label>Harga Jual (Rp)</label>
+      <input name="price" type="text" id="add-product-price" placeholder="0" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)">
+      <label>Stok</label>
+      <input name="stock" type="number" value="0" placeholder="0" required>
+      <button type="submit">💾 Simpan</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>📋 Daftar Produk</h2>
+    <input id="productSearch" placeholder="🔍 Cari produk (kode, nama, harga)..." oninput="filterProductTable()" style="font-size: 0.9rem; margin-bottom: 15px; padding: 10px 14px;">
+    <div style="margin-bottom: 10px; font-size: 0.85rem; color: #b0b0b0;">
+      <span id="product-count">Menampilkan semua produk</span>
+    </div>
+    <div style="max-height: 600px; overflow-y: auto;">
+    <table class="table">
+      <thead><tr><th>Kode</th><th>Nama</th><th>Harga Asli</th><th>Harga Jual</th><th>Stok</th><th>Aksi</th></tr></thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td class="product-code">{{ p.code }}</td>
+          <td class="product-name-cell">
+            <span class="product-name-display" data-product-id="{{ p.id }}" data-product-name="{{ p.name }}" ondblclick="editProductName(this)">{{ p.name }}</span>
+            <input type="text" class="product-name-edit" data-product-id="{{ p.id }}" value="{{ p.name }}" style="display: none;" onblur="saveProductName(this)" onkeydown="handleProductNameKeydown(event, this)">
+          </td>
+          <td>{{ p.cost_price | format_idr }}</td>
+          <td>{{ p.price | format_idr }}</td>
+          <td>{{ p.stock }}</td>
+          <td class="action-cell">
+            <form method="post" action="/products/update" class="action-form" onsubmit="return handleUpdateProduct(event, {{ p.id }})">
+              <input type="hidden" name="pid" value="{{ p.id }}">
+              <input type="hidden" name="stock" value="{{ p.stock }}">
+              <input type="hidden" name="name" value="{{ p.name }}" id="hidden-name-{{ p.id }}">
+              
+              <!-- Baris 1: Harga Asli | Harga Jual -->
+              <div class="action-row action-row-1">
+                <input name="cost_price" type="text" id="update-product-cost-price-{{ p.id }}" value="{{ p.cost_price | format_idr }}" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" class="action-input action-cost-price" placeholder="Harga Asli">
+                <input name="price" type="text" id="update-product-price-{{ p.id }}" value="{{ p.price | format_idr }}" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" class="action-input action-price" placeholder="Harga Jual">
+              </div>
+              
+              <!-- Baris 2: Stok Info | Update Produk -->
+              <div class="action-row action-row-2">
+                <span class="stock-info">Stok: <strong>{{ p.stock }}</strong></span>
+                <div class="update-product-section">
+                  <span class="update-product-label">Update Produk:</span>
+                  <input name="stock_add" type="number" min="0" value="0" placeholder="+Stok" class="action-input action-stock-add" title="Tambahkan stok (min: 0)">
+                </div>
+              </div>
+              
+              <!-- Baris 3: Tombol Update | Tombol Hapus -->
+              <div class="action-row action-row-3">
+                <button type="submit" class="btn-update">✏️ Update</button>
+                <button type="button" class="btn-delete" onclick="handleDeleteProductClick(event, {{ p.id }})">🗑️ Hapus</button>
+              </div>
+            </form>
+            
+            <!-- Form Delete (hidden, dipanggil via JavaScript) -->
+            <form method="post" action="/products/delete" id="delete-form-{{ p.id }}" style="display: none;" onsubmit="return handleDeleteProduct(event, {{ p.id }})">
+              <input type="hidden" name="pid" value="{{ p.id }}">
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- Card Excel - Full Width, Dibagi 2 -->
+<div class="excel-section">
+  <div class="grid-excel-cards">
+    <div class="card">
+      <h2>⬆️ Impor Produk dari Excel</h2>
+      <form id="import-excel-form" class="form" enctype="multipart/form-data" style="gap: 16px;">
+        <label for="excel-file" style="font-weight: 600; margin-bottom: 8px;">Pilih file Excel (.xlsx, .xls)</label>
+        <input type="file" id="excel-file" name="file" accept=".xlsx, .xls" required style="padding: 12px; cursor: pointer;">
+        <button type="submit" id="upload-excel-btn" style="width: 100%; padding: 12px 20px; margin-top: 8px;">⬆️ Upload & Import</button>
+        <small class="hint" style="display: block; margin-top: 12px; line-height: 1.5;">Format file Excel: Kolom harus berisi 'kode_produk', 'nama_produk', 'harga_asli', 'harga_jual', 'stok'</small>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>📦 Update Stok via Excel</h2>
+      <div class="form">
+        <a href="/products/export_stock_template" class="btn" style="margin-bottom: 20px; display: block; text-align: center; width: 100%; padding: 12px 20px;">⬇️ Download Template Update Stok</a>
+        <form id="import-stock-form" class="form" enctype="multipart/form-data" style="gap: 16px;">
+          <label for="stock-excel-file" style="font-weight: 600; margin-bottom: 8px;">Pilih file Excel yang sudah diisi (.xlsx, .xls)</label>
+          <input type="file" id="stock-excel-file" name="file" accept=".xlsx, .xls" required style="padding: 12px; cursor: pointer;">
+          <button type="submit" id="upload-stock-btn" style="width: 100%; padding: 12px 20px; margin-top: 8px;">⬆️ Upload & Update Stok</button>
+          <small class="hint" style="display: block; margin-top: 12px; line-height: 1.5;">Format: 'kode_produk', 'harga_asli', 'harga_jual', 'stok_baru'.<br>Total pengeluaran akan dihitung otomatis saat stok bertambah.</small>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+{% block content %}
+<div id="receipt-wrapper">
+  <div class="receipt">
+    <!-- Header: Nama Toko -->
+    <div class="receipt-header">
+      <div class="store-name">{{ settings.store_name }}</div>
+      {% if settings.store_address %}<div class="store-address">{{ settings.store_address }}</div>{% endif %}
+      {% if settings.store_phone %}<div class="store-phone">Telp: {{ settings.store_phone }}</div>{% endif %}
+    </div>
+    
+    <!-- Garis pemisah -->
+    <div class="receipt-line"></div>
+    
+    <!-- Info Transaksi -->
+    <div class="receipt-info">
+      <div class="info-row">
+        <span>No. Transaksi:</span>
+        <span>{{ trx.trx_no }}</span>
+      </div>
+      <div class="info-row">
+        <span>Tanggal:</span>
+        <span>{{ trx.created_at.strftime("%d/%m/%Y %H:%M") }}</span>
+      </div>
+      <div class="info-row">
+        <span>Kasir:</span>
+        <span>{{ trx.cashier }}</span>
+      </div>
+    </div>
+    
+    <!-- Garis pemisah -->
+    <div class="receipt-line"></div>
+    
+    <!-- Daftar Item -->
+    <div class="receipt-items">
+      {% for it in trx.items %}
+      <div class="receipt-item">
+        <div class="item-header">
+          <span class="item-name">{{ it.product_name }}</span>
+        </div>
+        <div class="item-details">
+          <span class="item-qty">{{ it.qty }} x Rp {{ it.price | format_idr }}</span>
+          <span class="item-total">Rp {{ it.subtotal | format_idr }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <!-- Garis pemisah -->
+    <div class="receipt-line"></div>
+    
+    <!-- Total -->
+    <div class="receipt-total">
+      <div class="total-row">
+        <span>Total</span>
+        <span class="total-amount">Rp {{ trx.total | format_idr }}</span>
+      </div>
+      <div class="payment-row">
+        <span>Pembayaran:</span>
+        <span class="payment-method">{{ trx.payment_method | upper }}</span>
+      </div>
+      <div class="payment-row">
+        <span>Bayar:</span>
+        <span>Rp {{ trx.paid | format_idr }}</span>
+      </div>
+      <div class="payment-row">
+        <span>Kembali:</span>
+        <span>Rp {{ trx.change | format_idr }}</span>
+      </div>
+    </div>
+    
+    <!-- Garis pemisah -->
+    <div class="receipt-line"></div>
+    
+    <!-- Footer -->
+    <div class="receipt-footer">
+      <div class="footer-text">Terima kasih atas kunjungan Anda</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button onclick="window.print()">🖨️ Print</button>
+    <a class="btn" href="{{ back_url }}">◀️ Kembali</a>
+    <a class="btn" href="/cashier">➕ Transaksi Baru</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card">
+  <h2>⚙️ Pengaturan Toko</h2>
+  {% if request.query_params.get("msg") == "updated" %}
+    <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Pengaturan berhasil disimpan!</div>
+  {% endif %}
+  {% if request.query_params.get("msg") == "database_cleared" %}
+    <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Database berhasil dibersihkan!</div>
+  {% endif %}
+  {% if request.query_params.get("msg") == "error_clear" %}
+    <div class="alert">Terjadi kesalahan saat membersihkan database.</div>
+  {% endif %}
+  <form id="settings-form" method="post" action="/settings" class="form" onsubmit="return handleUpdateSettings(event)">
+    <label for="store-name">Nama Toko</label>
+    <input type="text" id="store-name" name="store_name" value="{{ settings.store_name }}" required>
+
+    <label for="store-address">Alamat Toko</label>
+    <textarea id="store-address" name="store_address">{{ settings.store_address }}</textarea>
+
+    <label for="store-phone">Telepon Toko</label>
+    <input type="text" id="store-phone" name="store_phone" value="{{ settings.store_phone }}">
+
+    <button type="submit">💾 Simpan Pengaturan</button>
+  </form>
+
+  <div class="card" style="margin-top: 20px;">
+    <h2>🔒 Pengaturan Akun</h2>
+    {% if request.query_params.get("msg") == "display_name_updated" %}
+      <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Nama kasir berhasil diperbarui!</div>
+    {% endif %}
+    <form method="post" action="/settings/update_display_name" class="form" onsubmit="return handleUpdateDisplayName(event)">
+      <label for="display-name">Nama Kasir (untuk Struk/Laporan)</label>
+      <input type="text" id="display-name" name="new_display_name" value="{{ user.display_name if user.display_name else user.username }}" required>
+
+      <button type="submit">💾 Update Nama Kasir</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top: 20px; border: 2px solid rgba(229, 57, 53, 0.4);">
+    <h2 style="color: #ffcdd2;">⚠️ Database Management</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.85rem;">
+      Hati-hati! Tindakan ini akan menghapus semua data dari database termasuk produk, transaksi, dan pengaturan.
+    </p>
+    <form method="post" action="/settings/clear_database" id="clear-database-form" onsubmit="return handleClearDatabase(event)">
+      <button type="submit" class="btn-danger" style="width: 100%; padding: 12px 20px; font-size: 0.9rem;">
+        🗑️ Clear Database (Hapus Semua Data)
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

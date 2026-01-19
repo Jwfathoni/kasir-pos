@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <title>{{ title if title else "POS Kasir" }}</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">💰 <span class="gradient-text">HTMZ Kasir</span></div>
+    {% if user %}
+      <nav>
+        <a href="/cashier">🛒 Kasir</a>
+        <a href="/products">📦 Produk</a>
+        <a href="/reports?mode=daily">📊 Laporan</a>
+        <a href="/settings">⚙️ Pengaturan</a>
+        <button id="theme-toggle" class="theme-toggle" title="Toggle Dark/Light Mode">🌓</button>
+        <a href="#" id="logout-link">🚪 Logout ({{ user.username }})</a>
+      </nav>
+    {% endif %}
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="/static/app.js"></script>
+
+  <div id="logout-modal" class="modal">
+    <div class="modal-content card">
+      <h3>Konfirmasi Logout</h3>
+      <p>Apakah Anda yakin ingin keluar dari aplikasi?</p>
+      <div class="modal-actions">
+        <button id="cancel-logout" class="btn">Tidak</button>
+        <a href="/logout" class="btn danger">Ya, Keluar</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="export-excel-modal" class="modal">
+    <div class="modal-content card">
+      <h3 id="export-modal-title">Konfirmasi Unduh Laporan</h3>
+      <p id="export-modal-message">Anda akan mengunduh laporan.</p>
+      <div class="modal-actions">
+        <button id="cancel-export" class="btn">Tidak</button>
+        <button id="confirm-export" class="btn success">Ya, Unduh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Generic untuk Alert dan Confirm -->
+  <div id="generic-modal" class="modal">
+    <div class="modal-content card">
+      <h3 id="generic-modal-title">Pemberitahuan</h3>
+      <p id="generic-modal-message"></p>
+      <div class="modal-actions" id="generic-modal-actions">
+        <!-- Buttons akan diisi oleh JavaScript -->
+      </div>
+    </div>
+  </div>
+</body>
+</html>

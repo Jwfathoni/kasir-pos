@@ -67,3 +67,4 @@ class Setting(Base):
     store_name = Column(String, default="Nama Toko Anda")
     store_address = Column(String, default="Alamat Toko Anda")
     store_phone = Column(String, default="")
+    timezone = Column(String, default="WIB")  # WIB (UTC+7), WITA (UTC+8), WIT (UTC+9)

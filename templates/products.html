@@ -26,8 +26,14 @@
       <span id="product-count">Menampilkan semua produk</span>
     </div>
     <div style="max-height: 600px; overflow-y: auto;">
-    <table class="table">
-      <thead><tr><th>Kode</th><th>Nama</th><th>Harga Asli</th><th>Harga Jual</th><th>Stok</th><th>Aksi</th></tr></thead>
+    <table class="table products-table">
+      <thead>
+        <tr>
+          <th>Kode</th>
+          <th>Nama</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
       <tbody>
         {% for p in products %}
         <tr>
@@ -36,9 +42,6 @@
             <span class="product-name-display" data-product-id="{{ p.id }}" data-product-name="{{ p.name }}" ondblclick="editProductName(this)">{{ p.name }}</span>
             <input type="text" class="product-name-edit" data-product-id="{{ p.id }}" value="{{ p.name }}" style="display: none;" onblur="saveProductName(this)" onkeydown="handleProductNameKeydown(event, this)">
           </td>
-          <td>{{ p.cost_price | format_idr }}</td>
-          <td>{{ p.price | format_idr }}</td>
-          <td>{{ p.stock }}</td>
           <td class="action-cell">
             <form method="post" action="/products/update" class="action-form" onsubmit="return handleUpdateProduct(event, {{ p.id }})">
               <input type="hidden" name="pid" value="{{ p.id }}">
@@ -47,21 +50,52 @@
               
               <!-- Baris 1: Harga Asli | Harga Jual -->
               <div class="action-row action-row-1">
-                <input name="cost_price" type="text" id="update-product-cost-price-{{ p.id }}" value="{{ p.cost_price | format_idr }}" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" class="action-input action-cost-price" placeholder="Harga Asli">
-                <input name="price" type="text" id="update-product-price-{{ p.id }}" value="{{ p.price | format_idr }}" required onkeyup="formatInputRupiah(this)" onblur="formatInputRupiah(this)" onfocus="unformatInputRupiah(this)" class="action-input action-price" placeholder="Harga Jual">
-              </div>
-              
-              <!-- Baris 2: Stok Info | Update Produk -->
-              <div class="action-row action-row-2">
-                <span class="stock-info">Stok: <strong>{{ p.stock }}</strong></span>
-                <div class="update-product-section">
-                  <span class="update-product-label">Update Produk:</span>
-                  <input name="stock_add" type="number" min="0" value="0" placeholder="+Stok" class="action-input action-stock-add" title="Tambahkan stok (min: 0)">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <span style="font-size:0.7rem;color:var(--text-secondary);">Harga Beli (Asli)</span>
+                  <input
+                    name="cost_price"
+                    type="text"
+                    id="update-product-cost-price-{{ p.id }}"
+                    value="{{ p.cost_price | format_idr }}"
+                    data-original-cost-price="{{ p.cost_price }}"
+                    required
+                    onkeyup="formatInputRupiah(this)"
+                    onblur="formatInputRupiah(this)"
+                    onfocus="unformatInputRupiah(this)"
+                    class="action-input action-cost-price"
+                    placeholder="Harga Beli"
+                  >
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <span style="font-size:0.7rem;color:var(--text-secondary);">Harga Jual</span>
+                  <input
+                    name="price"
+                    type="text"
+                    id="update-product-price-{{ p.id }}"
+                    value="{{ p.price | format_idr }}"
+                    data-original-price="{{ p.price }}"
+                    required
+                    onkeyup="formatInputRupiah(this)"
+                    onblur="formatInputRupiah(this)"
+                    onfocus="unformatInputRupiah(this)"
+                    class="action-input action-price"
+                    placeholder="Harga Jual"
+                  >
                 </div>
               </div>
               
+              <!-- Baris 2: Keuntungan | Stok | Update Produk -->
+              <div class="action-row action-row-2 compact-info-row">
+                <span class="info-item">Keuntungan: <b>Rp {{ (p.price - p.cost_price) | format_idr }}</b></span>
+                <span class="info-divider">|</span>
+                <span class="info-item">Stok: <b>{{ p.stock }}</b></span>
+                <span class="info-divider">|</span>
+                <span class="info-item">Update Produk:</span>
+                <input name="stock_add" type="number" min="0" value="0" placeholder="+Stok" class="action-input action-stock-add" title="Tambahkan stok (min: 0)">
+              </div>
+              
               <!-- Baris 3: Tombol Update | Tombol Hapus -->
-              <div class="action-row action-row-3">
+              <div class="action-row action-row-3 button-row">
                 <button type="submit" class="btn-update">✏️ Update</button>
                 <button type="button" class="btn-delete" onclick="handleDeleteProductClick(event, {{ p.id }})">🗑️ Hapus</button>
               </div>

@@ -457,13 +457,14 @@ async function handleUpdateProduct(event, productId) {
   
   // Jika tidak ada perubahan, tidak perlu konfirmasi
   if (stockAdd === 0) {
-    // Cek apakah harga berubah (perlu unformat dulu untuk compare)
-    const currentCostPrice = parseFloat(costPriceInput.getAttribute('data-original-cost-price') || costPriceInput.value.replace(/[^\d]/g, ''));
-    const currentPrice = parseFloat(priceInput.getAttribute('data-original-price') || priceInput.value.replace(/[^\d]/g, ''));
+    // Cek apakah harga berubah (bandingkan dengan nilai original dari data-attribute)
+    const currentCostPrice = parseFloat(costPriceInput.getAttribute('data-original-cost-price'));
+    const currentPrice = parseFloat(priceInput.getAttribute('data-original-price'));
     const newCostPrice = parseFloat(costPriceInput.value.replace(/[^\d]/g, ''));
     const newPrice = parseFloat(priceInput.value.replace(/[^\d]/g, ''));
     
-    if (currentCostPrice === newCostPrice && currentPrice === newPrice) {
+    if (!isNaN(currentCostPrice) && !isNaN(currentPrice) &&
+        currentCostPrice === newCostPrice && currentPrice === newPrice) {
       await showAlert('Tidak ada perubahan yang perlu disimpan.', 'Informasi', 'info');
       return false;
     }
@@ -650,6 +651,30 @@ async function handleClearDatabase(event) {
     event.target.submit();
   }
   
+  return false;
+}
+
+// Handle import database (backup restore) dengan konfirmasi
+async function handleImportDatabase(event) {
+  event.preventDefault();
+
+  const fileInput = event.target.querySelector('input[type="file"]');
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    await showAlert('Pilih file database terlebih dahulu.', 'Tidak ada file', 'warning');
+    return false;
+  }
+
+  const confirmed = await showConfirm(
+    'Import database akan MENGGANTI seluruh data saat ini dengan isi file yang diupload.\n\n' +
+    'Pastikan Anda menggunakan file backup yang benar.\n\n' +
+    'Lanjutkan?',
+    'Konfirmasi Import Database'
+  );
+
+  if (confirmed) {
+    event.target.submit();
+  }
+
   return false;
 }
 

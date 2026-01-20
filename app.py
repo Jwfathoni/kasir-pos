@@ -1,17 +1,20 @@
 from fastapi import FastAPI, Request, Depends, Form, UploadFile, File, HTTPException, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from starlette.middleware.sessions import SessionMiddleware
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from calendar import monthrange
 import pandas as pd
 import io
+import os
+import shutil
 from fastapi.responses import JSONResponse
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+import pytz
 
 from db import engine, Base, get_db
 from models import User, Product, Transaction, TransactionItem, Setting, StockUpdate
@@ -66,6 +69,16 @@ def run_migrations():
                     print("[OK] Migration: Tabel stock_updates berhasil dibuat")
             except Exception as e:
                 print(f"Migration stock_updates: {e}")
+            
+            # Cek dan tambahkan timezone ke settings
+            try:
+                result = conn.execute(text("PRAGMA table_info(settings)"))
+                columns = [row[1] for row in result]
+                if 'timezone' not in columns:
+                    conn.execute(text("ALTER TABLE settings ADD COLUMN timezone VARCHAR DEFAULT 'WIB'"))
+                    print("[OK] Migration: Kolom timezone ditambahkan ke tabel settings")
+            except Exception as e:
+                print(f"Migration settings timezone: {e}")
     except Exception as e:
         print(f"Error saat migration: {e}")
 
@@ -81,8 +94,48 @@ def format_idr(value):
 
 templates.env.filters["format_idr"] = format_idr
 
+# Timezone utility functions
+TIMEZONE_MAP = {
+    "WIB": "Asia/Jakarta",      # UTC+7
+    "WITA": "Asia/Makassar",    # UTC+8
+    "WIT": "Asia/Jayapura"      # UTC+9
+}
+
+def get_current_setting_timezone(db: Session) -> str:
+    """Get timezone from settings, default to WIB"""
+    settings = db.query(Setting).first()
+    return settings.timezone if settings and settings.timezone else "WIB"
+
+def get_timezone_offset(timezone_str: str) -> timedelta:
+    """Get UTC offset untuk timezone Indonesia"""
+    offsets = {"WIB": 7, "WITA": 8, "WIT": 9}
+    hours = offsets.get(timezone_str, 7)
+    return timedelta(hours=hours)
+
+def get_current_time_with_tz(db: Session) -> datetime:
+    """Get current time adjusted to setting timezone"""
+    tz_name = get_current_setting_timezone(db)
+    tz = pytz.timezone(TIMEZONE_MAP[tz_name])
+    return datetime.now(tz)
+
+def format_datetime_with_tz(dt: datetime, db: Session, format_str: str = "%d-%m-%Y %H:%M:%S") -> str:
+    """Format datetime dengan timezone yang dipilih"""
+    if dt is None:
+        return "-"
+    
+    # Jika dt adalah naive datetime (tanpa timezone info), anggap sebagai UTC
+    if dt.tzinfo is None:
+        dt = pytz.utc.localize(dt)
+    
+    tz_name = get_current_setting_timezone(db)
+    tz = pytz.timezone(TIMEZONE_MAP[tz_name])
+    dt_local = dt.astimezone(tz)
+    return dt_local.strftime(format_str)
+
+templates.env.filters["format_datetime_tz"] = format_datetime_with_tz
+
 def make_trx_no(db: Session):
-    today = datetime.now().strftime("%Y%m%d")
+    today = get_current_time_with_tz(db).strftime("%Y%m%d")
     like = f"TRX-{today}-%"
     count = db.query(func.count(Transaction.id)).filter(Transaction.trx_no.like(like)).scalar() or 0
     return f"TRX-{today}-{count+1:04d}"
@@ -465,6 +518,17 @@ def import_stock_update_from_excel(
 
 
 # -------- CASHIER ----------
+@app.get("/api/timezone-info")
+def get_timezone_info(db: Session = Depends(get_db)):
+    """API untuk mendapatkan timezone dan waktu saat ini"""
+    timezone_name = get_current_setting_timezone(db)
+    current_time = get_current_time_with_tz(db)
+    return {
+        "timezone": timezone_name,
+        "current_time": current_time.strftime("%d-%m-%Y %H:%M:%S"),
+        "current_time_formatted": current_time.strftime("%A, %d %B %Y %H:%M:%S")
+    }
+
 @app.get("/cashier", response_class=HTMLResponse)
 def cashier_page(request: Request, err: str = None, db: Session = Depends(get_db)):
     r = require_login(request)
@@ -560,12 +624,16 @@ def receipt_page(request: Request, trx_id: int, from_page: str = Query(None, ali
     if from_page == "reports":
         back_url = f"/reports?mode={mode}"
     
+    # Format created_at dengan timezone
+    formatted_created_at = format_datetime_with_tz(trx.created_at, db, "%d/%m/%Y %H:%M")
+    
     return templates.TemplateResponse("receipt.html", {
         "request": request, 
         "trx": trx, 
         "user": request.session["user"], 
         "settings": settings,
-        "back_url": back_url
+        "back_url": back_url,
+        "formatted_created_at": formatted_created_at
     })
 
 # -------- REPORTS ----------
@@ -606,6 +674,10 @@ def reports_page(request: Request, mode: str = "daily", db: Session = Depends(ge
     pengeluaran_stok = sum(su.total_pengeluaran or 0 for su in stock_updates)
 
     jumlah = len(trx_list)
+    
+    # Format created_at untuk semua transaksi
+    for trx in trx_list:
+        trx.formatted_created_at = format_datetime_with_tz(trx.created_at, db, "%Y-%m-%d %H:%M")
 
     return templates.TemplateResponse("reports.html", {
         "request": request,
@@ -773,10 +845,16 @@ def update_settings(
     store_name: str = Form(...),
     store_address: str = Form(...),
     store_phone: str = Form(...),
+    timezone: str = Form(default="WIB"),
     db: Session = Depends(get_db),
 ):
     r = require_login(request)
     if r: return r
+    
+    # Validasi timezone
+    if timezone not in ["WIB", "WITA", "WIT"]:
+        timezone = "WIB"
+    
     settings = db.query(Setting).first()
     if not settings:
         settings = Setting()
@@ -784,6 +862,7 @@ def update_settings(
     settings.store_name = store_name
     settings.store_address = store_address
     settings.store_phone = store_phone
+    settings.timezone = timezone
     db.commit()
     return RedirectResponse("/settings?msg=updated", status_code=302)
 
@@ -804,6 +883,62 @@ def update_display_name(
         request.session["user"]["display_name"] = user_in_db.display_name # Update session immediately
         return RedirectResponse("/settings?msg=display_name_updated", status_code=302)
     return RedirectResponse("/settings?msg=error", status_code=302)
+
+
+@app.get("/settings/export_db")
+def export_database(request: Request):
+    """Export seluruh database SQLite (pos.db) sebagai file download."""
+    r = require_login(request)
+    if r: return r
+    db_path = os.path.join(os.path.dirname(__file__), "pos.db")
+    if not os.path.exists(db_path):
+        raise HTTPException(status_code=404, detail="File database tidak ditemukan.")
+    filename = f"pos_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    return FileResponse(
+        path=db_path,
+        media_type="application/octet-stream",
+        filename=filename,
+    )
+
+
+@app.post("/settings/import_db")
+def import_database(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """Import database SQLite dari file upload (replace pos.db)."""
+    r = require_login(request)
+    if r: return r
+
+    # Validasi ekstensi
+    if not file.filename.lower().endswith((".db", ".sqlite", ".sqlite3")):
+        return RedirectResponse("/settings?msg=error_import", status_code=302)
+
+    db_dir = os.path.dirname(__file__)
+    db_path = os.path.join(db_dir, "pos.db")
+    tmp_path = os.path.join(db_dir, "pos_import_tmp.db")
+
+    try:
+        # Simpan upload ke file sementara
+        with open(tmp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Tutup semua koneksi aktif ke SQLite sebelum replace
+        engine.dispose()
+
+        # Replace database lama dengan yang baru
+        shutil.move(tmp_path, db_path)
+
+        return RedirectResponse("/settings?msg=imported", status_code=302)
+    except Exception as e:
+        # Bersihkan tmp jika ada
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except:
+            pass
+        print(f"Error import database: {e}")
+        return RedirectResponse("/settings?msg=error_import", status_code=302)
 
 @app.post("/settings/clear_database")
 def clear_database(request: Request, db: Session = Depends(get_db)):

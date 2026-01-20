@@ -5,12 +5,17 @@
   {% if request.query_params.get("msg") == "updated" %}
     <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Pengaturan berhasil disimpan!</div>
   {% endif %}
+  {% if request.query_params.get("msg") == "imported" %}
+    <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Database berhasil diimport!</div>
+  {% endif %}
   {% if request.query_params.get("msg") == "database_cleared" %}
     <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Database berhasil dibersihkan!</div>
   {% endif %}
   {% if request.query_params.get("msg") == "error_clear" %}
     <div class="alert">Terjadi kesalahan saat membersihkan database.</div>
   {% endif %}
+  
+  <h3>🏪 Informasi Toko</h3>
   <form id="settings-form" method="post" action="/settings" class="form" onsubmit="return handleUpdateSettings(event)">
     <label for="store-name">Nama Toko</label>
     <input type="text" id="store-name" name="store_name" value="{{ settings.store_name }}" required>
@@ -24,7 +29,33 @@
     <button type="submit">💾 Simpan Pengaturan</button>
   </form>
 
-  <div class="card" style="margin-top: 20px;">
+  <h3 style="margin-top: 30px; color: var(--accent-color);">⏰ Pengaturan Zona Waktu</h3>
+  <div class="timezone-card">
+    <div class="timezone-info">
+      <strong style="color: var(--text-secondary); font-size: 0.85rem;">Waktu Saat Ini</strong>
+      <p id="current-time" style="font-weight: 600; font-size: 1.2rem; color: var(--accent-color); margin: 8px 0 0 0;"></p>
+    </div>
+    <form method="post" action="/settings" class="form" onsubmit="return handleUpdateSettings(event)">
+      <input type="hidden" name="store_name" value="{{ settings.store_name }}">
+      <input type="hidden" name="store_address" value="{{ settings.store_address }}">
+      <input type="hidden" name="store_phone" value="{{ settings.store_phone }}">
+      
+      <label for="timezone">Pilih Zona Waktu Indonesia</label>
+      <select id="timezone" name="timezone" required class="timezone-select">
+        <option value="WIB" {% if settings.timezone == "WIB" %}selected{% endif %}>WIB - Waktu Indonesia Barat (UTC+7)</option>
+        <option value="WITA" {% if settings.timezone == "WITA" %}selected{% endif %}>WITA - Waktu Indonesia Tengah (UTC+8)</option>
+        <option value="WIT" {% if settings.timezone == "WIT" %}selected{% endif %}>WIT - Waktu Indonesia Timur (UTC+9)</option>
+      </select>
+      
+      <small style="color: var(--text-secondary); margin-top: 8px; display: block; font-size: 0.8rem;">
+        💡 Semua waktu pada struk, laporan, dan transaksi akan otomatis menyesuaikan dengan zona waktu yang dipilih.
+      </small>
+      
+      <button type="submit" class="timezone-button">💾 Simpan Zona Waktu</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top: 30px;">
     <h2>🔒 Pengaturan Akun</h2>
     {% if request.query_params.get("msg") == "display_name_updated" %}
       <div class="alert" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(67, 160, 71, 0.2) 100%); border-color: rgba(76, 175, 80, 0.4); color: #a5d6a7;">Nama kasir berhasil diperbarui!</div>
@@ -35,6 +66,28 @@
 
       <button type="submit">💾 Update Nama Kasir</button>
     </form>
+  </div>
+
+  <div class="card" style="margin-top: 20px; border: 2px solid rgba(255, 235, 59, 0.6);">
+    <h2 style="color: #fdd835;">💾 Backup & Restore Database</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.85rem;">
+      Gunakan fitur ini untuk menyimpan semua data (produk, transaksi, dll) ke file, dan mengembalikannya lagi saat diperlukan.
+    </p>
+    <div class="form" style="gap: 12px;">
+      <a href="/settings/export_db" class="btn btn-warning" style="width: 100%; padding: 10px 16px; text-align: center;">
+        ⬇️ Export Database (Backup)
+      </a>
+      <form method="post" action="/settings/import_db" enctype="multipart/form-data" onsubmit="return handleImportDatabase(event)" style="display:flex; flex-direction:column; gap:8px;">
+        <label for="db-file" style="font-size:0.85rem; color:var(--text-secondary);">Import Database (.db / .sqlite)</label>
+        <input type="file" id="db-file" name="file" accept=".db,.sqlite,.sqlite3" required class="db-file-input">
+        <button type="submit" class="btn-warning" style="padding: 10px 16px; font-size: 0.85rem;">
+          ⬆️ Import Database (Replace)
+        </button>
+        <small style="font-size:0.8rem; color:var(--text-secondary);">
+          Import akan mengganti database saat ini dengan file yang diupload. Pastikan file backup benar.
+        </small>
+      </form>
+    </div>
   </div>
 
   <div class="card" style="margin-top: 20px; border: 2px solid rgba(229, 57, 53, 0.4);">
@@ -49,4 +102,46 @@
     </form>
   </div>
 </div>
+
+<script>
+// Update waktu saat ini setiap detik dengan offset yang dipilih
+function updateCurrentTime() {
+  const timezone = document.getElementById('timezone').value || 'WIB';
+  const tzOffsets = { 'WIB': 7, 'WITA': 8, 'WIT': 9 };
+  const offset = tzOffsets[timezone] || 7;
+  
+  // Hitung waktu UTC + offset
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const localTime = new Date(utc + (3600000 * offset));
+  
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  };
+  
+  const formatter = new Intl.DateTimeFormat('id-ID', options);
+  const formatted = formatter.format(localTime);
+  
+  document.getElementById('current-time').textContent = formatted + ' (' + timezone + ')';
+}
+
+// Update saat halaman load dan setiap detik
+if (document.getElementById('current-time')) {
+  updateCurrentTime();
+  setInterval(updateCurrentTime, 1000);
+  
+  // Update juga saat timezone berubah
+  const tzSelect = document.getElementById('timezone');
+  if (tzSelect) {
+    tzSelect.addEventListener('change', updateCurrentTime);
+  }
+}
+</script>
 {% endblock %}

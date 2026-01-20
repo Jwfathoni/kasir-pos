@@ -287,6 +287,75 @@ input[type="file"]::file-selector-button:hover {
   transform: translateY(-1px);
 }
 
+/* Timezone Select Styling */
+.timezone-select {
+  padding: 12px 14px !important;
+  border: 2px solid var(--border-color) !important;
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  font-size: 0.95rem !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.timezone-select:hover {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 8px rgba(100, 150, 255, 0.15);
+}
+
+.timezone-select:focus {
+  outline: none;
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 3px rgba(100, 150, 255, 0.15) !important;
+  background-color: var(--input-bg) !important;
+}
+
+.timezone-select option {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 8px 12px;
+}
+
+.timezone-select option:checked {
+  background: linear-gradient(#2196F3, #2196F3);
+  background-color: #2196F3 !important;
+  color: white !important;
+}
+
+/* Timezone Card Container */
+.timezone-card {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.02) 100%);
+  border: 2px solid var(--border-color);
+  border-left: 4px solid var(--accent-color);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  transition: all 0.3s ease;
+}
+
+.timezone-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
+}
+
+.timezone-info {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.timezone-button {
+  margin-top: 12px !important;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #1976d2 100%) !important;
+  transition: all 0.3s ease !important;
+}
+
+.timezone-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3) !important;
+}
+
 button {
   cursor: pointer;
   background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
@@ -360,6 +429,19 @@ button:active {
   padding: 10px 12px;
   vertical-align: top;
   font-size: 0.85rem; /* Font lebih kecil */
+}
+
+/* Khusus tabel Produk: Kode, Nama, Harga Asli, Harga Jual, Stok, Aksi rata tengah */
+.products-table th {
+  text-align: center;
+}
+.products-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+.products-table td.product-name-cell,
+.products-table td.action-cell {
+  text-align: left;
 }
 
 /* Kode produk lebih kecil */
@@ -442,34 +524,10 @@ button:active {
 /* Baris 2: Stok Info | Update Produk */
 .action-row-2 {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 12px;
-}
-
-.update-product-section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.update-product-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.stock-info {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.stock-info strong {
-  color: var(--text-primary);
-  font-weight: 600;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Baris 3: Tombol Update | Tombol Hapus */
@@ -506,8 +564,33 @@ button:active {
 }
 
 .action-stock-add {
-  width: 80px;
+  width: 60px;
   flex-shrink: 0;
+}
+
+/* Compact horizontal info row */
+.compact-info-row {
+  flex-wrap: wrap;
+  text-align: left;
+  justify-content: flex-start;
+}
+.compact-info-row .info-item {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.compact-info-row .info-item b {
+  font-weight: 700;
+}
+.compact-info-row .info-divider {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.button-row {
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .btn-update,
@@ -579,6 +662,68 @@ body.light-mode .btn-update {
 body.light-mode .btn-delete {
   background: linear-gradient(135deg, rgba(229, 57, 53, 0.1) 0%, rgba(198, 40, 40, 0.1) 100%);
   color: #c62828;
+}
+
+/* Tombol kuning (warning) untuk backup/restore */
+.btn-warning {
+  background: linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%) !important;
+  color: #3e2723 !important;
+  border: 2px solid rgba(255, 235, 59, 0.8) !important;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(255, 235, 59, 0.4) !important;
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, #fdd835 0%, #f9a825 100%) !important;
+  box-shadow: 0 6px 20px rgba(255, 235, 59, 0.5) !important;
+  border-color: rgba(255, 235, 59, 1) !important;
+  transform: translateY(-2px);
+}
+
+.btn-warning:focus,
+.btn-warning:active {
+  background: linear-gradient(135deg, #f9a825 0%, #f57f17 100%) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(255, 235, 59, 0.4) !important;
+}
+
+body.light-mode .btn-warning {
+  background: linear-gradient(135deg, #fff59d 0%, #ffe082 100%) !important;
+  color: #5d4037 !important;
+  border: 2px solid rgba(255, 235, 59, 0.6) !important;
+}
+
+/* File input tombol kuning khusus untuk import DB */
+.db-file-input::file-selector-button {
+  background: linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%) !important;
+  color: #3e2723 !important;
+  border: 2px solid rgba(255, 235, 59, 0.8) !important;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 8px;
+  box-shadow: 0 3px 8px rgba(255, 235, 59, 0.3) !important;
+}
+.db-file-input::file-selector-button:hover {
+  background: linear-gradient(135deg, #fdd835 0%, #f9a825 100%) !important;
+  box-shadow: 0 4px 12px rgba(255, 235, 59, 0.5) !important;
+  border-color: rgba(255, 235, 59, 1) !important;
+  transform: translateY(-1px);
+}
+.db-file-input::file-selector-button:focus,
+.db-file-input::file-selector-button:active {
+  background: linear-gradient(135deg, #f9a825 0%, #f57f17 100%) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 235, 59, 0.4) !important;
+}
+.db-file-input {
+  color: var(--text-primary);
+}
+.db-file-input:focus {
+  outline: 2px solid rgba(255, 235, 59, 0.5) !important;
+  outline-offset: 2px;
 }
 
 /* Responsive untuk kolom Aksi */
@@ -974,6 +1119,20 @@ body.light-mode .alert {
   transition: color 0.3s ease;
 }
 
+.current-time {
+  animation: fadeIn 0.5s ease;
+  letter-spacing: 0.5px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .actions {
   display: flex;
   gap: 12px;
@@ -1002,6 +1161,26 @@ body.light-mode .alert {
   background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(66, 165, 245, 0.4);
+}
+
+/* Override .btn for warning variant so tidak biru */
+.btn.btn-warning {
+  background: linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%) !important;
+  color: #3e2723 !important;
+  border: 2px solid rgba(255, 235, 59, 0.8) !important;
+  box-shadow: 0 4px 15px rgba(255, 235, 59, 0.4) !important;
+}
+.btn.btn-warning:hover {
+  background: linear-gradient(135deg, #fdd835 0%, #f9a825 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 235, 59, 0.5) !important;
+  border-color: rgba(255, 235, 59, 1) !important;
+}
+.btn.btn-warning:focus,
+.btn.btn-warning:active {
+  background: linear-gradient(135deg, #f9a825 0%, #f57f17 100%) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(255, 235, 59, 0.4) !important;
 }
 
 .tabs {

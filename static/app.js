@@ -209,7 +209,20 @@ async function submitCheckout(event) {
 function filterProducts() {
   const q = (document.getElementById("search").value || "").toLowerCase();
   const list = document.getElementById("productList");
+  const hint = document.getElementById('cashier-product-hint');
   if (!list) return;
+
+  // Jika query kosong, sembunyikan seluruh daftar dan tampilkan hint
+  if (!q) {
+    list.style.display = 'none';
+    if (hint) hint.textContent = 'Ketik untuk menampilkan produk';
+    return;
+  }
+
+  // Tampilkan daftar dan filter item
+  list.style.display = '';
+  if (hint) hint.textContent = `Hasil pencarian: "${q}"`;
+
   [...list.children].forEach(btn => {
     const text = btn.innerText.toLowerCase();
     btn.style.display = text.includes(q) ? "" : "none";
@@ -220,53 +233,92 @@ function filterProducts() {
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('reports-page')) {
     loadReports();
+    
+    // Add event listeners to tabs to reload reports when mode changes
+    const tabs = document.querySelectorAll('.tabs .tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        // Small delay untuk memastikan active class sudah terupdate
+        setTimeout(() => {
+          loadReports();
+        }, 50);
+      });
+    });
   }
 });
 
 async function loadReports() {
-  // Load Summary Report
-  fetch('/api/reports/summary')
+  // Get current mode from tabs
+  const activeTab = document.querySelector('.tabs .tab.active');
+  const currentMode = activeTab ? activeTab.getAttribute('data-mode') : 'daily';
+  
+  // Update transaction label based on mode
+  const transactionLabel = document.getElementById('transaction-label');
+  if (transactionLabel) {
+    if (currentMode === 'daily') {
+      transactionLabel.textContent = 'Total transaksi hari ini';
+    } else if (currentMode === 'monthly') {
+      transactionLabel.textContent = 'Total transaksi bulan ini';
+    } else if (currentMode === 'yearly') {
+      transactionLabel.textContent = 'Total transaksi tahun ini';
+    }
+  }
+
+  // Update sold label based on mode
+  const soldLabel = document.getElementById('sold-label');
+  if (soldLabel) {
+    if (currentMode === 'daily') {
+      soldLabel.textContent = 'Produk terjual hari ini';
+    } else if (currentMode === 'monthly') {
+      soldLabel.textContent = 'Produk terjual bulan ini';
+    } else if (currentMode === 'yearly') {
+      soldLabel.textContent = 'Produk terjual tahun ini';
+    }
+  }
+  
+  // Load Summary Report (with mode parameter)
+  fetch(`/api/reports/summary?mode=${currentMode}`)
     .then(response => response.json())
     .then(data => {
-      document.getElementById('total-products').textContent = data.total_products;
-      document.getElementById('active-products').textContent = data.active_products;
-      document.getElementById('products-sold-this-month').textContent = data.products_sold_this_month;
+      document.getElementById('total-products').textContent = data.total_products || 0;
+      document.getElementById('total-transactions').textContent = data.total_transactions || 0;
+      document.getElementById('products-sold').textContent = data.products_sold_this_month || 0;
     })
     .catch(error => console.error('Error loading summary report:', error));
 
   // Load Top Products Report
-  fetch('/api/reports/top_products')
+  fetch(`/api/reports/top_products?mode=${currentMode}`)
     .then(response => response.json())
     .then(data => {
       const topSellingEl = document.getElementById('top-selling-products');
-      topSellingEl.innerHTML = data.top_selling_products.map(p => `<li>${p.name} (${p.total_qty_sold} unit)</li>`).join('');
+      topSellingEl.innerHTML = data.top_selling_products.slice(0, 5).map(p => `<li><span class="item-name">${p.name}</span><span class="item-qty">${p.total_qty_sold} unit</span></li>`).join('');
 
       const highestRevenueEl = document.getElementById('highest-revenue-products');
-      highestRevenueEl.innerHTML = data.highest_revenue_products.map(p => `<li>${p.name} (${formatCurrency(p.total_revenue)})</li>`).join('');
+      highestRevenueEl.innerHTML = data.highest_revenue_products.slice(0, 5).map(p => `<li><span class="item-name">${p.name}</span><span class="item-qty">${formatCurrency(p.total_revenue)}</span></li>`).join('');
     })
     .catch(error => console.error('Error loading top products report:', error));
 
   // Load Problem Products Report
-  fetch('/api/reports/problem_products')
+  fetch(`/api/reports/problem_products?mode=${currentMode}`)
     .then(response => response.json())
     .then(data => {
       const rarelySoldEl = document.getElementById('rarely-sold-products');
-      rarelySoldEl.innerHTML = data.rarely_sold_products.map(p => `<li>${p.name} (${p.total_qty_sold} unit)</li>`).join('');
+      rarelySoldEl.innerHTML = data.rarely_sold_products.slice(0, 5).map(p => `<li><span class="item-name">${p.name}</span><span class="item-qty">${p.total_qty_sold} unit</span></li>`).join('');
 
       const neverSoldEl = document.getElementById('never-sold-products');
-      neverSoldEl.innerHTML = data.never_sold_products.map(p => `<li>${p.name}</li>`).join('');
+      neverSoldEl.innerHTML = data.never_sold_products.slice(0, 5).map(p => `<li><span class="item-name">${p.name}</span></li>`).join('');
     })
     .catch(error => console.error('Error loading problem products report:', error));
 
   // Load Stock Report
-  fetch('/api/reports/stock')
+  fetch(`/api/reports/stock?mode=${currentMode}`)
     .then(response => response.json())
     .then(data => {
       const lowStockEl = document.getElementById('low-stock-products');
-      lowStockEl.innerHTML = data.low_stock_products.map(p => `<li>${p.name} (Stok: ${p.stock})</li>`).join('');
+      lowStockEl.innerHTML = data.low_stock_products.slice(0, 5).map(p => `<li><span class="item-name">${p.name}</span><span class="item-qty">Stok: ${p.stock}</span></li>`).join('');
 
       const overstockEl = document.getElementById('overstock-products');
-      overstockEl.innerHTML = data.overstock_products.map(p => `<li>${p.name} (Stok: ${p.stock})</li>`).join('');
+      overstockEl.innerHTML = data.overstock_products.slice(0, 5).map(p => `<li><span class="item-name">${p.name}</span><span class="item-qty">Stok: ${p.stock}</span></li>`).join('');
     })
     .catch(error => console.error('Error loading stock report:', error));
 
@@ -274,11 +326,99 @@ async function loadReports() {
   fetch('/api/reports/sales_trend')
     .then(response => response.json())
     .then(data => {
-      const salesTrendEl = document.getElementById('sales-trend-raw');
       if (data.sales_trend.length > 0) {
-        salesTrendEl.textContent = data.sales_trend.map(s => `${s.month}: ${formatCurrency(s.total_sales)}`).join('\n');
-      } else {
-        salesTrendEl.textContent = 'Tidak ada data tren penjualan.';
+        const chartCanvas = document.getElementById('sales-trend-chart');
+        const ctx = chartCanvas.getContext('2d');
+        
+        // Prepare chart data
+        const labels = data.sales_trend.map(s => s.month);
+        const values = data.sales_trend.map(s => s.total_sales);
+        
+        // Get theme colors
+        const isDarkMode = document.body.classList.contains('light-mode') === false;
+        const textColor = isDarkMode ? '#e3e9f3' : '#1a1f2e';
+        const gridColor = isDarkMode ? 'rgba(46, 160, 67, 0.1)' : 'rgba(46, 160, 67, 0.3)';
+        const primaryColor = isDarkMode ? '#2ea043' : '#1a8b45';
+        const primaryLight = isDarkMode ? 'rgba(46, 160, 67, 0.2)' : 'rgba(26, 139, 69, 0.35)';
+        
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Omzet Penjualan (Rp)',
+              data: values,
+              borderColor: primaryColor,
+              backgroundColor: primaryLight,
+              borderWidth: isDarkMode ? 3 : 4,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: primaryColor,
+              pointBorderColor: isDarkMode ? '#fff' : '#fff',
+              pointBorderWidth: 3,
+              pointRadius: 7,
+              pointHoverRadius: 9,
+              pointHoverBackgroundColor: primaryColor,
+              pointHoverBorderColor: '#fff',
+              pointHoverBorderWidth: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                display: true,
+                labels: {
+                  color: textColor,
+                  font: { size: 12, weight: '600' },
+                  usePointStyle: true,
+                  padding: 15
+                }
+              },
+              tooltip: {
+                backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+                padding: 12,
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                borderColor: primaryColor,
+                borderWidth: 1,
+                usePointStyle: true,
+                callbacks: {
+                  label: function(context) {
+                    return 'Rp ' + formatCurrency(context.parsed.y);
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: gridColor,
+                  drawBorder: false
+                },
+                ticks: {
+                  color: textColor,
+                  font: { size: 11 },
+                  callback: function(value) {
+                    return 'Rp ' + (value / 1000000).toFixed(1) + 'jt';
+                  }
+                }
+              },
+              x: {
+                grid: {
+                  display: false,
+                  drawBorder: false
+                },
+                ticks: {
+                  color: textColor,
+                  font: { size: 11 }
+                }
+              }
+            }
+          }
+        });
       }
     })
     .catch(error => console.error('Error loading sales trend report:', error));

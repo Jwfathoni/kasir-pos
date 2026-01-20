@@ -8,8 +8,11 @@
 <div class="grid2">
   <div class="card">
     <h2>📦 Produk</h2>
-    <input id="search" placeholder="🔍 Cari produk..." oninput="filterProducts()" style="font-size: 1rem;">
-    <div id="productList" class="plist">
+    <input id="search" placeholder="🔍 Ketik untuk mencari produk..." oninput="filterProducts()" style="font-size: 1rem;">
+    <div style="margin-bottom: 10px; font-size: 0.85rem; color: #b0b0b0;">
+      <span id="cashier-product-hint">Ketik untuk menampilkan produk</span>
+    </div>
+    <div id="productList" class="plist" style="display: none;">
       {% for p in products %}
       <button class="pitem" onclick='addToCart("{{p.code}}","{{p.name}}",{{p.price}})'>
         <b>{{ p.name }}</b><br>

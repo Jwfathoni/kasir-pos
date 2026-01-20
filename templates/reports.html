@@ -3,80 +3,99 @@
 <div class="card" id="reports-page">
   <h2>{{ title }}</h2>
 
-  <div class="tabs">
-    <a class="tab {% if mode=='daily' %}active{% endif %}" href="/reports?mode=daily" data-mode="daily">Harian</a>
-    <a class="tab {% if mode=='monthly' %}active{% endif %}" href="/reports?mode=monthly" data-mode="monthly">Bulanan</a>
-    <a class="tab {% if mode=='yearly' %}active{% endif %}" href="/reports?mode=yearly" data-mode="yearly">Tahunan</a>
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <a class="tab {% if mode=='daily' %}active{% endif %}" href="/reports?mode=daily" data-mode="daily">Harian</a>
+      <a class="tab {% if mode=='monthly' %}active{% endif %}" href="/reports?mode=monthly" data-mode="monthly">Bulanan</a>
+      <a class="tab {% if mode=='yearly' %}active{% endif %}" href="/reports?mode=yearly" data-mode="yearly">Tahunan</a>
+    </div>
+
+    <div class="tabs-actions">
+      <button id="export-excel-btn" class="btn export-btn">⬇️ Export ke Excel</button>
+    </div>
   </div>
 
   <div class="summary">
-    <div>📊 Jumlah transaksi: <b>{{ jumlah }}</b></div>
     <div>💰 Omzet: <b>Rp {{ omzet }}</b></div>
     <div>💵 Pendapatan rill: <b>Rp {{ pendapatan_rill }}</b></div>
     <div>📦 Pengeluaran upgrade stok: <b>Rp {{ pengeluaran_stok }}</b></div>
-    <button id="export-excel-btn" class="btn" style="background-color: #4CAF50;">⬇️ Export ke Excel</button>
   </div>
 
-  <table class="table">
-    <thead><tr><th>No</th><th>Tanggal</th><th>Kasir</th><th>Total</th><th>Aksi</th></tr></thead>
-    <tbody>
-      {% for t in trx_list %}
-      <tr>
-        <td>{{ t.trx_no }}</td>
-        <td>{{ t.formatted_created_at }}</td>
-        <td>{{ t.cashier }}</td>
-        <td>Rp {{ t.total | format_idr }}</td>
-        <td><a href="/receipt/{{t.id}}?from=reports&mode={{ mode }}" style="color: #64b5f6; text-decoration: none; font-weight: 500;">👁️ Lihat/Print</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="reports-transactions">
+    <table class="table table-header">
+      <thead>
+        <tr>
+          <th class="col-trx">No</th>
+          <th class="col-date">Tanggal</th>
+          <th class="col-cashier">Kasir</th>
+          <th class="col-total">Total</th>
+          <th class="col-action">Aksi</th>
+        </tr>
+      </thead>
+    </table>
 
-  <h3 class="report-section-title">Ringkasan Produk</h3>
+    <div class="table-body-wrapper">
+      <table class="table table-body">
+        <tbody>
+          {% for t in trx_list %}
+          <tr>
+            <td class="col-trx">{{ t.trx_no }}</td>
+            <td class="col-date">{{ t.formatted_created_at }}</td>
+            <td class="col-cashier">{{ t.cashier }}</td>
+            <td class="col-total">Rp {{ t.total | format_idr }}</td>
+            <td class="col-action"><a href="/receipt/{{t.id}}?from=reports&mode={{ mode }}" style="color: #2ea043; text-decoration: none; font-weight: 500;">👁️ Lihat/Print</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3 class="report-section-title">Sorotan Produk</h3>
   <div class="summary product-summary">
-    <div>Total Produk: <b id="total-products">...</b></div>
-    <div>Produk Aktif: <b id="active-products">...</b></div>
-    <div>Produk Terjual Bulan Ini: <b id="products-sold-this-month">...</b></div>
+    <div class="ps-item"><span>Total item</span> <b id="total-products">0</b></div>
+    <div class="ps-item"><span id="transaction-label">Total transaksi tahun ini</span> <b id="total-transactions">0</b></div>
+    <div class="ps-item"><span id="sold-label">Produk terjual tahun ini</span> <b id="products-sold">0</b></div>
   </div>
 
   <div class="grid-reports">
     <div class="card">
-      <h3 class="report-card-title">Top Produk Paling Laku</h3>
+      <h3 class="report-card-title"><span class="report-card-icon">🔥</span> Top Produk Paling Laku</h3>
       <ul id="top-selling-products" class="report-list">
         <li>...</li>
       </ul>
     </div>
 
     <div class="card">
-      <h3 class="report-card-title">Top Produk Omzet Tertinggi</h3>
+      <h3 class="report-card-title"><span class="report-card-icon">💰</span> Top Produk Omzet Tertinggi</h3>
       <ul id="highest-revenue-products" class="report-list">
         <li>...</li>
       </ul>
     </div>
 
     <div class="card">
-      <h3 class="report-card-title">Produk Jarang Laku</h3>
+      <h3 class="report-card-title"><span class="report-card-icon">🐢</span> Produk Jarang Laku</h3>
       <ul id="rarely-sold-products" class="report-list">
         <li>...</li>
       </ul>
     </div>
 
     <div class="card">
-      <h3 class="report-card-title">Produk Tidak Pernah Terjual</h3>
+      <h3 class="report-card-title"><span class="report-card-icon">🚫</span> Produk Tidak Pernah Terjual</h3>
       <ul id="never-sold-products" class="report-list">
         <li>...</li>
       </ul>
     </div>
 
     <div class="card">
-      <h3 class="report-card-title">Produk Stok Hampir Habis</h3>
+      <h3 class="report-card-title"><span class="report-card-icon">⚠️</span> Produk Stok Hampir Habis</h3>
       <ul id="low-stock-products" class="report-list">
         <li>...</li>
       </ul>
     </div>
 
     <div class="card">
-      <h3 class="report-card-title">Produk Overstock</h3>
+      <h3 class="report-card-title"><span class="report-card-icon">📦</span> Produk Overstock</h3>
       <ul id="overstock-products" class="report-list">
         <li>...</li>
       </ul>
@@ -84,11 +103,8 @@
   </div>
 
   <h3 class="report-section-title">Tren Penjualan</h3>
-  <div class="card">
-    <div id="sales-trend-chart" style="height: 300px;">
-      <!-- Chart will be rendered here -->
-      <pre id="sales-trend-raw">Loading sales trend...</pre>
-    </div>
+  <div class="card sales-trend-card">
+    <canvas id="sales-trend-chart"></canvas>
   </div>
 </div>
 {% endblock %}

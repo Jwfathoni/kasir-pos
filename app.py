@@ -691,40 +691,74 @@ def reports_page(request: Request, mode: str = "daily", db: Session = Depends(ge
         "user": request.session["user"]
     })
 
-@app.get("/api/reports/summary")
-def get_summary_report(db: Session = Depends(get_db)):
+# Helper function for summary report (can be called internally or via API)
+def get_summary_report_helper(db: Session, mode: str = "yearly"):
     total_products = db.query(Product).count()
-    active_products = db.query(Product).filter(Product.status == "active").count()
-
+    
     now = datetime.now()
-    start_of_month = datetime(now.year, now.month, 1)
-    end_of_month = datetime(now.year, now.month, monthrange(now.year, now.month)[1], 23, 59, 59)
-
-    products_sold_this_month = (
+    
+    # Determine date range based on mode
+    if mode == "daily":
+        start_date = datetime(now.year, now.month, now.day, 0, 0, 0)
+        end_date = datetime(now.year, now.month, now.day, 23, 59, 59)
+    elif mode == "monthly":
+        start_date = datetime(now.year, now.month, 1, 0, 0, 0)
+        end_date = datetime(now.year, now.month, monthrange(now.year, now.month)[1], 23, 59, 59)
+    else:  # yearly
+        start_date = datetime(now.year, 1, 1, 0, 0, 0)
+        end_date = datetime(now.year, 12, 31, 23, 59, 59)
+    
+    # Total transactions in the period
+    total_transactions = (
+        db.query(Transaction)
+        .filter(Transaction.created_at >= start_date, Transaction.created_at <= end_date)
+        .count()
+    )
+    
+    # Products sold in the period (sum of transaction items)
+    products_sold = (
         db.query(func.sum(TransactionItem.qty))
         .join(Transaction)
-        .filter(Transaction.created_at >= start_of_month, Transaction.created_at <= end_of_month)
+        .filter(Transaction.created_at >= start_date, Transaction.created_at <= end_date)
         .scalar()
         or 0
     )
 
     return {
         "total_products": total_products,
-        "active_products": active_products,
-        "products_sold_this_month": products_sold_this_month,
+        "total_transactions": total_transactions,
+        "products_sold_this_month": products_sold,
     }
 
-@app.get("/api/reports/top_products")
-def get_top_products_report(db: Session = Depends(get_db)):
+@app.get("/api/reports/summary")
+def get_summary_report(mode: str = Query("yearly"), db: Session = Depends(get_db)):
+    return get_summary_report_helper(db, mode)
+
+# Helper function for top products report
+def get_top_products_report_helper(db: Session, mode: str = "yearly"):
+    now = datetime.now()
+    
+    # Determine date range based on mode
+    if mode == "daily":
+        start_date = datetime(now.year, now.month, now.day, 0, 0, 0)
+        end_date = datetime(now.year, now.month, now.day, 23, 59, 59)
+    elif mode == "monthly":
+        start_date = datetime(now.year, now.month, 1, 0, 0, 0)
+        end_date = datetime(now.year, now.month, monthrange(now.year, now.month)[1], 23, 59, 59)
+    else:  # yearly
+        start_date = datetime(now.year, 1, 1, 0, 0, 0)
+        end_date = datetime(now.year, 12, 31, 23, 59, 59)
+    
     top_selling_products = (
         db.query(
             Product.name,
             func.sum(TransactionItem.qty).label("total_qty_sold")
         )
         .join(TransactionItem, Product.code == TransactionItem.product_code)
+        .join(Transaction)
+        .filter(Transaction.created_at >= start_date, Transaction.created_at <= end_date)
         .group_by(Product.name)
         .order_by(func.sum(TransactionItem.qty).desc())
-        .limit(5)
         .all()
     )
 
@@ -734,9 +768,10 @@ def get_top_products_report(db: Session = Depends(get_db)):
             func.sum(TransactionItem.subtotal).label("total_revenue")
         )
         .join(TransactionItem, Product.code == TransactionItem.product_code)
+        .join(Transaction)
+        .filter(Transaction.created_at >= start_date, Transaction.created_at <= end_date)
         .group_by(Product.name)
         .order_by(func.sum(TransactionItem.subtotal).desc())
-        .limit(5)
         .all()
     )
 
@@ -745,28 +780,52 @@ def get_top_products_report(db: Session = Depends(get_db)):
         "highest_revenue_products": [{"name": p.name, "total_revenue": p.total_revenue} for p in highest_revenue_products],
     }
 
+@app.get("/api/reports/top_products")
+def get_top_products_report(mode: str = Query("yearly"), db: Session = Depends(get_db)):
+    return get_top_products_report_helper(db, mode)
+
 @app.get("/api/reports/problem_products")
-def get_problem_products_report(db: Session = Depends(get_db)):
-    # Produk jarang laku (misal, terjual kurang dari 5 unit sepanjang waktu)
+def get_problem_products_report(mode: str = Query("yearly"), db: Session = Depends(get_db)):
+    return get_problem_products_report_helper(db, mode)
+
+# Helper function for problem products report
+def get_problem_products_report_helper(db: Session, mode: str = "yearly"):
+    now = datetime.now()
+    
+    # Determine date range based on mode
+    if mode == "daily":
+        start_date = datetime(now.year, now.month, now.day, 0, 0, 0)
+        end_date = datetime(now.year, now.month, now.day, 23, 59, 59)
+    elif mode == "monthly":
+        start_date = datetime(now.year, now.month, 1, 0, 0, 0)
+        end_date = datetime(now.year, now.month, monthrange(now.year, now.month)[1], 23, 59, 59)
+    else:  # yearly
+        start_date = datetime(now.year, 1, 1, 0, 0, 0)
+        end_date = datetime(now.year, 12, 31, 23, 59, 59)
+    
+    # Produk jarang laku (terjual kurang dari 5 unit dalam periode)
     rarely_sold_products = (
         db.query(
             Product.name,
             func.sum(TransactionItem.qty).label("total_qty_sold")
         )
         .outerjoin(TransactionItem, Product.code == TransactionItem.product_code)
+        .outerjoin(Transaction)
+        .filter(
+            ((Transaction.created_at >= start_date) & (Transaction.created_at <= end_date)) |
+            (Transaction.id == None)
+        )
         .group_by(Product.name)
         .having(func.sum(TransactionItem.qty) < 5)
         .order_by(func.sum(TransactionItem.qty).asc())
-        .limit(5)
         .all()
     )
 
-    # Produk tidak pernah terjual
+    # Produk tidak pernah terjual (sepanjang waktu)
     never_sold_products = (
         db.query(Product.name)
         .outerjoin(TransactionItem, Product.code == TransactionItem.product_code)
         .filter(TransactionItem.id == None)
-        .limit(5)
         .all()
     )
 
@@ -775,23 +834,24 @@ def get_problem_products_report(db: Session = Depends(get_db)):
         "never_sold_products": [{"name": p.name} for p in never_sold_products],
     }
 
-@app.get("/api/reports/stock")
-def get_stock_report(db: Session = Depends(get_db)):
-    # Produk hampir habis (misal, stok kurang dari 10)
+# Helper function for stock report
+def get_stock_report_helper(db: Session, mode: str = "yearly"):
+    # Stock report tidak tergantung mode, karena stock adalah state saat ini
+    # Tapi tetap terima parameter untuk konsistensi API
+    
+    # Produk hampir habis (stok kurang dari 10)
     low_stock_products = (
         db.query(Product.name, Product.stock)
         .filter(Product.stock < 10, Product.status == "active")
         .order_by(Product.stock.asc())
-        .limit(5)
         .all()
     )
 
-    # Produk overstock (misal, stok lebih dari 100)
+    # Produk overstock (stok lebih dari 100)
     overstock_products = (
         db.query(Product.name, Product.stock)
         .filter(Product.stock > 100, Product.status == "active")
         .order_by(Product.stock.desc())
-        .limit(5)
         .all()
     )
 
@@ -799,6 +859,10 @@ def get_stock_report(db: Session = Depends(get_db)):
         "low_stock_products": [{"name": p.name, "stock": p.stock} for p in low_stock_products],
         "overstock_products": [{"name": p.name, "stock": p.stock} for p in overstock_products],
     }
+
+@app.get("/api/reports/stock")
+def get_stock_report(mode: str = Query("yearly"), db: Session = Depends(get_db)):
+    return get_stock_report_helper(db, mode)
 
 @app.get("/api/reports/sales_trend")
 def get_sales_trend_report(db: Session = Depends(get_db)):
@@ -1120,15 +1184,24 @@ def export_reports_excel(request: Request, mode: str = "daily", db: Session = De
             df_stock_updates.to_excel(writer, sheet_name='Detail Update Stok', index=False)
 
         # Ringkasan Produk (efisien - hanya data penting)
-        summary_data = get_summary_report(db)
+        summary_data = get_summary_report_helper(db, mode)
+        
+        # Dynamic label berdasarkan mode
+        if mode == "daily":
+            label_suffix = "Harian"
+        elif mode == "monthly":
+            label_suffix = "Bulan Ini"
+        else:
+            label_suffix = "Tahun Ini"
+        
         df_summary = pd.DataFrame([{
             "Ringkasan": "Total Produk", "Nilai": summary_data["total_products"]},
-            {"Ringkasan": "Produk Terjual Bulan Ini", "Nilai": summary_data["products_sold_this_month"]},
+            {"Ringkasan": f"Produk Terjual {label_suffix}", "Nilai": summary_data["products_sold_this_month"]},
         ])
         df_summary.to_excel(writer, sheet_name='Ringkasan Produk', index=False)
 
         # Top Produk Paling Laku
-        top_products = get_top_products_report(db)
+        top_products = get_top_products_report_helper(db, mode)
         df_top_selling = pd.DataFrame(top_products["top_selling_products"])
         df_top_selling.rename(columns={'name': 'Nama Produk', 'total_qty_sold': 'Total Terjual'})
         df_top_selling.to_excel(writer, sheet_name='Top Produk Laku', index=False)
@@ -1139,7 +1212,7 @@ def export_reports_excel(request: Request, mode: str = "daily", db: Session = De
         df_highest_revenue.to_excel(writer, sheet_name='Top Produk Omzet', index=False)
 
         # Produk Bermasalah
-        problem_products = get_problem_products_report(db)
+        problem_products = get_problem_products_report_helper(db, mode)
         df_rarely_sold = pd.DataFrame(problem_products["rarely_sold_products"])
         df_rarely_sold.rename(columns={'name': 'Nama Produk', 'total_qty_sold': 'Jumlah Terjual'})
         df_rarely_sold.to_excel(writer, sheet_name='Jarang Laku', index=False)
@@ -1149,7 +1222,7 @@ def export_reports_excel(request: Request, mode: str = "daily", db: Session = De
         df_never_sold.to_excel(writer, sheet_name='Tidak Terjual', index=False)
 
         # Stok Produk
-        stock_report = get_stock_report(db)
+        stock_report = get_stock_report_helper(db, mode)
         df_low_stock = pd.DataFrame(stock_report["low_stock_products"])
         df_low_stock.rename(columns={'name': 'Nama Produk', 'stock': 'Stok'})
         df_low_stock.to_excel(writer, sheet_name='Stok Hampir Habis', index=False)
